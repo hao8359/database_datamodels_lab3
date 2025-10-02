@@ -1,0 +1,5 @@
+# configures which files should be executable
+# this is only here to solve the issues of NTFS (windows)
+python-examples/*.py
+!python-examples/session.py
+scripts/*.sh

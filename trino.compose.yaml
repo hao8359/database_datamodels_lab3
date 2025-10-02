@@ -1,0 +1,31 @@
+services:
+  trino-coordinator-1:
+    build: ./images/trino/.
+    container_name: trino-coordinator-1
+    hostname: trino-coordinator-1
+    ports:
+      - "8091:8080"
+    volumes:
+      - ./conf/trino/catalog/:/etc/trino/catalog/
+      - ./conf/trino/coordinator/config.properties:/etc/trino/config.properties
+      - ./hudi-ws/:/var/hoodie/ws
+    links:
+      - hivemetastore
+
+  trino-worker-1:
+    build: ./images/trino/.
+    container_name: trino-worker-1
+    hostname: trino-worker-1
+    ports:
+      - "8092:8080"
+    depends_on:
+      - trino-coordinator-1
+    volumes:
+      - ./conf/trino/catalog/:/etc/trino/catalog/
+      - ./conf/trino/worker/config.properties:/etc/trino/config.properties
+      - ./hudi-ws/:/var/hoodie/ws
+    links:
+      - hivemetastore
+      - hiveserver
+      - hive-metastore-postgresql
+      - namenode

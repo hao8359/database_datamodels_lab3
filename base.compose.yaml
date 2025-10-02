@@ -1,0 +1,163 @@
+services:
+
+  namenode:
+    image: apachehudi/hudi-hadoop_2.8.4-namenode:latest
+    hostname: namenode
+    container_name: namenode
+    environment:
+      - CLUSTER_NAME=hudi_minimal
+    env_file:
+      - ./hadoop.env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.namenode.rule=Host(`namenode.localhost`)"
+      - "traefik.http.services.namenode.loadbalancer.server.port=50070"
+    ports:
+      - "8020:8020" # HDFS NameNode IPC
+      - "9000:9000" # HDFS NameNode Client
+      - "50070:50070" # HDFS NameNode Web UI
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://namenode:9870"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  datanode1:
+    image: apachehudi/hudi-hadoop_2.8.4-datanode:latest
+    hostname: datanode1
+    container_name: datanode1
+    environment:
+      - CLUSTER_NAME=hudi_minimal
+    env_file:
+      - ./hadoop.env
+    depends_on:
+      - namenode
+    links:
+      - "namenode"
+      - "historyserver"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://datanode1:9864"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+      - "9864:9864"   # HDFS DataNode Web UI
+      - "50010:50010" # HDFS DataNode IPC
+      - "50075:50075" # HDFS DataNode HTTP
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.datanode1.rule=Host(`datanode.localhost`)"
+      - "traefik.http.services.datanode1.loadbalancer.server.port=50075"
+    volumes:
+      - datanode:/hadoop/dfs/data
+  
+  historyserver:
+    image: apachehudi/hudi-hadoop_2.8.4-history:latest
+    hostname: historyserver
+    container_name: historyserver
+    environment:
+      - CLUSTER_NAME=hudi_hadoop334_hive313_spark353
+    depends_on:
+      - "namenode"
+    links:
+      - "namenode"
+    ports:
+      - "8188:8188" # MapReduce JobHistory Server Port
+      - "19888:19888" # MapReduce JobHistory Server's web UI
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://historyserver:8188"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    env_file:
+      - ./hadoop.env
+    volumes:
+      - historyserver:/hadoop/yarn/timeline
+
+  hive-metastore-postgresql:
+    image: bde2020/hive-metastore-postgresql:2.3.0
+    container_name: hive-metastore-postgresql
+    volumes:
+      - hive-metastore-postgresql:/var/lib/postgresql
+    labels:
+      - "traefik.enable=false"
+
+  hivemetastore:
+    image: apachehudi/hudi-hadoop_2.8.4-hive_2.3.3:latest
+    hostname: hivemetastore
+    container_name: hivemetastore
+    env_file:
+      - ./hadoop.env
+    command: /opt/hive/bin/hive --service metastore
+    environment:
+      SERVICE_PRECONDITION: "namenode:50070 hive-metastore-postgresql:5432"
+    depends_on:
+      - hive-metastore-postgresql
+      - namenode
+    ports:
+      - 9083:9083
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hivemetastore.rule=Host(`hivemetastore.localhost`)"
+      - "traefik.http.services.hivemetastore.loadbalancer.server.port=9083"
+
+  hiveserver:
+    image: apachehudi/hudi-hadoop_2.8.4-hive_2.3.3:latest
+    hostname: hiveserver
+    container_name: hiveserver
+    env_file:
+      - ./hadoop.env
+    environment:
+      SERVICE_PRECONDITION: "hivemetastore:9083"
+    depends_on:
+      - hivemetastore
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hiveserver.rule=Host(`hiveserver.localhost`)"
+      - "traefik.http.services.hiveserver.loadbalancer.server.port=10000"
+    volumes:
+      - ./hudi-ws/:/var/hoodie/ws
+
+  sparkmaster:
+    image: apachehudi/hudi-hadoop_2.8.4-hive_2.3.3-sparkmaster_3.5.3:latest
+    hostname: sparkmaster
+    container_name: sparkmaster
+    env_file:
+      - ./hadoop.env
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+      - SPARK_LOCAL_IP=sparkmaster
+      - SPARK_DRIVER_HOST=sparkmaster
+      - SPARK_DRIVER_BIND_ADDRESS=0.0.0.0
+    depends_on:
+      - hivemetastore
+      - hiveserver
+      - namenode
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sparkmaster.rule=Host(`sparkmaster.localhost`)"
+      - "traefik.http.services.sparkmaster.loadbalancer.server.port=8080"
+    ports:
+      - 8080:8080
+      - 7077:7077
+
+  spark-worker-1:
+    image: apachehudi/hudi-hadoop_2.8.4-hive_2.3.3-sparkworker_3.5.3:latest
+    hostname: spark-worker-1
+    container_name: spark-worker-1
+    env_file:
+      - ./hadoop.env
+    depends_on:
+      - sparkmaster
+    environment:
+      - SPARK_MASTER=spark://sparkmaster:7077
+      - SPARK_MASTER_URL=spark://sparkmaster:7077
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sparkworker.rule=Host(`sparkworker.localhost`)"
+      - "traefik.http.services.sparkworker.loadbalancer.server.port=8081"
+
+volumes:
+  hive-metastore-postgresql:
+  datanode:
+  historyserver:
