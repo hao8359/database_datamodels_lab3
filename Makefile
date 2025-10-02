@@ -1,13 +1,13 @@
 compose_file ?= local.compose.yaml
 
-## --------------------
-## Help
-## --------------------
+DC_ARGS ?=
 
-# Default target: show help
 .PHONY: help
 help: ## Show this help
-	@echo "Usage: make <target>"
+	@echo "Usage: make <target> [DC_ARGS=\"<docker-compose args>\"]"
+	@echo ""
+	@echo "Hint:"
+	@echo "  To get started run: make clean up logs"
 	@echo ""
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -16,27 +16,22 @@ help: ## Show this help
 
 .DEFAULT_GOAL := help
 
-## --------------------
-## Targets
-## --------------------
-
 .PHONY: logs
 logs: ## Check logs
-	@docker compose -f $(compose_file) logs -f 
+	@docker compose -f $(compose_file) logs -f $(DC_ARGS)
 
 .PHONY: up
 up: ## Spin up a docker compose
-	@docker compose -f $(compose_file) up -d
+	@docker compose -f $(compose_file) up -d $(DC_ARGS)
 	@echo "[TIP] You can run make logs to see logs"
 
 .PHONY: down
 down: ## Stop running instances of the compose
-	@docker compose -f $(compose_file) down
+	@docker compose -f $(compose_file) down $(DC_ARGS)
 
 .PHONY: clean
 clean: ## Wipe all persisted data
-	@docker compose -f $(compose_file) down -v --remove-orphans
-
+	@docker compose -f $(compose_file) down -v --remove-orphans $(DC_ARGS)
 
 .PHONY: java
 java:

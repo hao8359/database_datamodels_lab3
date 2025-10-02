@@ -8,6 +8,6 @@ COPY --chmod=755 ./get-plugin.sh get-plugin.sh
 
 RUN ./get-plugin.sh
 
-FROM trinodb/trino:476 AS base
+FROM trinodb/trino:477 AS base
 
 COPY --from=plugin-provider /usr/lib/trino/plugin/hudi/ /usr/lib/trino/plugin/hudi/

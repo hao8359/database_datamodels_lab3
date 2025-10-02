@@ -17,14 +17,15 @@ public class CreateJSON {
                                 .option("hoodie.table.name", "fhir_raw_patient")
                                 .option("hoodie.table.type", "COPY_ON_WRITE")
 
-                                .option("hoodie.table.archive.max.commits", "1") // archive after 1 commit
-                                .option("hoodie.table.archive.min.commits", "1")
-
                                 .option("hoodie.database.name", "default")
                                 .option("hoodie.datasource.hive_sync.mode", "hms")
                                 .option("hoodie.datasource.meta.sync.enable", "true")
                                 .option("hoodie.datasource.hive_sync.metastore.uris",
                                                 Session.HIVE_META_URI)
+
+                                // prevent trino bug, trino fails if history folder (in
+                                // /fhir/patients-json/.hoodie/timeline/) exists and is empty
+                                .option("hoodie.archivelog.enable", "false")
 
                                 .mode("append")
                                 // We have access from spark to the hdfs server (the namenode)
