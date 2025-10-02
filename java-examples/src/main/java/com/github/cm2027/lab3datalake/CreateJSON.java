@@ -1,9 +1,13 @@
 package com.github.cm2027.lab3datalake;
 
+import com.github.cm2027.lab3datalake.hacks.TrinoHistoryFix;
+
 public class CreateJSON {
 
         public static void main(String[] args) {
                 var spark = Session.get();
+
+                var path = "/fhir/patients-json";
 
                 var df = spark
                                 .read()
@@ -23,14 +27,22 @@ public class CreateJSON {
                                 .option("hoodie.datasource.hive_sync.metastore.uris",
                                                 Session.HIVE_META_URI)
 
-                                // prevent trino bug, trino fails if history folder (in
-                                // /fhir/patients-json/.hoodie/timeline/) exists and is empty
+                                // part of preventing a trino bug (explained later)
                                 .option("hoodie.archivelog.enable", "false")
 
                                 .mode("append")
                                 // We have access from spark to the hdfs server (the namenode)
                                 // so we can tell spark to write to that URI.
-                                .save(Session.HDFS_BASE_URI + "/fhir/patients-json");
+                                .save(Session.HDFS_BASE_URI + path);
+
+                // prevent trino bug, trino fails if history folder (in
+                // /fhir/patients-json/.hoodie/timeline/) exists and is empty
+                try {
+                        TrinoHistoryFix.ensureEmptyHistoryDeleted(path);
+                } catch (Exception e) {
+                        System.out.println("Exception when trying to delete empty history directory on hdfs, path: " +
+                                        path);
+                }
         }
 
 }
