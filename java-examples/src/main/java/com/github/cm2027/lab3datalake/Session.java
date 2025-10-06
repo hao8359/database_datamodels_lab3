@@ -6,13 +6,17 @@ public class Session {
 
     private static SparkSession localInstance = null;
 
+    // toggle for running spark compute locally or just submitting to
+    // spark master => delegated to spark worker
     public static final boolean local = true;
 
     public static final String sparkMaster = local ? "local[*]" : "spark://localhost:7077";
 
+    @SuppressWarnings("unused")
     public static final String HDFS_BASE_URI = "" != "local[*]" ? "hdfs://namenode:8020"
             : "hdfs://localhost:8020";
 
+    @SuppressWarnings("unused")
     public static final String HIVE_META_URI = sparkMaster != "local[*]" ? "thrift://hivemetastore:9083"
             : "thrift://localhost:9083";
 

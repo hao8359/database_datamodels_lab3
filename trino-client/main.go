@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"text/tabwriter"
+	"time"
 
 	_ "github.com/trinodb/trino-go-client/trino"
 )
@@ -40,7 +41,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	// === Show tables in the schema ===
+	// === 0. Show tables in the schema ===
 	fmt.Printf("=== Tables in %s.%s ===\n", catalog, schema)
 	tables, err := getTables(ctx, db)
 	if err != nil {
@@ -99,6 +100,8 @@ func getTables(ctx context.Context, db *sql.DB) ([]string, error) {
 }
 
 func runQuery(ctx context.Context, db *sql.DB, query string) error {
+	start := time.Now()
+	defer func() { fmt.Printf("Duration of query: %q, Duration: %s\n", query, time.Since(start).String()) }()
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return err
@@ -110,21 +113,17 @@ func runQuery(ctx context.Context, db *sql.DB, query string) error {
 		return err
 	}
 
-	// setup tabwriter for aligned columns
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	// print header
 	for _, col := range cols {
 		fmt.Fprintf(w, "%s\t", col)
 	}
 	fmt.Fprintln(w)
 
-	// print separator
 	for range cols {
 		fmt.Fprintf(w, "--------\t")
 	}
 	fmt.Fprintln(w)
 
-	// print rows
 	for rows.Next() {
 		values := make([]any, len(cols))
 		valPtrs := make([]any, len(cols))
