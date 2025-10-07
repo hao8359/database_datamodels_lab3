@@ -6,7 +6,7 @@ x-hive-names:
 services:
 
   hive-metastore-db:
-    image: bde2020/hive-metastore-db:2.3.0
+    image: bde2020/hive-metastore-postgresql:2.3.0
     container_name: *hive-metastore-db
     volumes:
       - hive-metastore-db:/var/lib/postgresql
