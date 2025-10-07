@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -e
+
+PROGRAM="kthcloud"
+NS_FILE=".kthcloud-ns"
+
+if ! command -v "$PROGRAM" >/dev/null 2>&1; then
+    echo "[WARN] '$PROGRAM' not found." >&2
+    read -rp "Do you want to download it? (y/N): " yn
+    case "$yn" in
+        [Yy]*)
+            echo "[INFO] Downloading $PROGRAM..." >&2
+            # Example download logic — customize for your binary
+            curl -fsSL https://raw.githubusercontent.com/Phillezi/kthcloud-cli/main/scripts/install.sh | bash
+            source ~/.bashrc
+            echo "[INFO] Installed $PROGRAM successfully." >&2
+            ;;
+        *)
+            echo "[ERROR] $PROGRAM is required. Aborting." >&2
+            exit 1
+            ;;
+    esac
+fi
+
+
+if [[ ! -f "$NS_FILE" ]]; then
+    echo "[INFO] Creating namespace file: $NS_FILE" >&2
+
+    email=$(kthcloud whoami | awk -F': *' '/^Email/ {print $2}' | xargs)
+    ns="${email%@*}-"
+
+    echo "export NS_PREFIX=\"$ns\"" > "$NS_FILE"
+    echo "[INFO] Saved namespace as '$ns'." >&2
+else
+    echo "[INFO] Namespace file already exists. Skipping setup." >&2
+fi
+
+
+source "$NS_FILE"
+
+exec "$PROGRAM" "$@"

@@ -10,4 +10,10 @@ RUN ./get-plugin.sh
 
 FROM trinodb/trino:477 AS base
 
+COPY --chmod=755 ./entrypoint.sh /usr/bin/docker-entrypoint.sh
+
 COPY --from=plugin-provider /usr/lib/trino/plugin/hudi/ /usr/lib/trino/plugin/hudi/
+
+ENTRYPOINT [ "/usr/bin/docker-entrypoint.sh" ]
+
+CMD ["/usr/lib/trino/bin/run-trino"]

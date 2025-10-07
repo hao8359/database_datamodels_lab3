@@ -83,16 +83,26 @@ In tests, Trino is much faster than Spark (~200-500ms vs multiple seconds), but 
 
 ## Compose Files
 
-This repository includes three different Docker Compose configurations that define various parts of the data-lake setup.
+This repository includes five[^*] different Docker Compose configurations that define various parts of the data-lake setup.
 
 * [`base.compose.yaml`](./base.compose.yaml):
   Defines the **core data lake components**, such as the [`namenode` and `datanode`](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html#NameNode+and+DataNodes). It also includes services required for **Hive** and **Spark**, like [`sparkmaster`]() and [`spark-worker-1`]().
+
+* [`hive.compose.yaml`](./hive.compose.yaml):
+  Includes services required for **Hive**.
+
+* [`spark.compose.yaml`](./spark.compose.yaml):
+  Adds **Spark**, [`sparkmaster`]() and [`spark-worker-1`]().
 
 * [`trino.compose.yaml`](./trino.compose.yaml):
   Adds optional services needed to enable **[Trino](https://trino.io/)** as a high-performance SQL query engine for interactive reads on the data lake.
 
 * [`local.compose.yaml`](./local.compose.yaml):
   Wraps both the other compose files + adds a `traefik` reverse proxy.
+
+---
+
+[^*]: There are actually six different docker compose configurations, but the last one is only used for deploying to [the cloud](https://cloud.cbh.kth.se/) with the [`kthcloudw`](./kthcloudw) wrapper script.
 
 ## Code Examples
 
