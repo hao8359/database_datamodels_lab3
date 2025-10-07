@@ -3,7 +3,7 @@ package com.github.cm2027.lab3datalake;
 import java.time.Duration;
 import java.time.Instant;
 
-public class ReadJSON {
+public class Read {
     public static void main(String[] args) {
         var spark = Session.get();
 

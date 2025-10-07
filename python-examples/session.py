@@ -1,10 +1,14 @@
 from pyspark.sql import SparkSession
 
-hdfs_base_uri = "hdfs://localhost:8020"
+spark_master = "local[*]"
+
+hdfs_base_uri = "hdfs://namenode:8020"
+
+hive_meta_uri = "thrift://localhost:9083"
 
 spark = SparkSession.builder \
-    .appName("fhir_hudi_job") \
-    .master("local[*]") \
+    .appName("hudi_example_fhir_etl") \
+    .master(spark_master) \
     .config("spark.jars.packages", "org.apache.hudi:hudi-spark3.5-bundle_2.12:1.0.2") \
     .config("spark.sql.hive.convertMetastoreParquet", 'false') \
     .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer") \
