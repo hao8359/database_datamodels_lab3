@@ -14,6 +14,9 @@ COPY --chmod=755 ./entrypoint.sh /usr/bin/docker-entrypoint.sh
 
 COPY --from=plugin-provider /usr/lib/trino/plugin/hudi/ /usr/lib/trino/plugin/hudi/
 
+# to avoid permission issues when running entrypoint script
+USER root
+
 ENTRYPOINT [ "/usr/bin/docker-entrypoint.sh" ]
 
 CMD ["/usr/lib/trino/bin/run-trino"]

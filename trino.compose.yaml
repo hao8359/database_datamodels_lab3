@@ -11,11 +11,15 @@ services:
     environment:
       - TRINO_CATALOG_HIVE_HIVE_METASTORE_URI=thrift://${NS_PREFIX}${HIVEMETASTORE:-hivemetastore}:9083
       - TRINO_CONFIG_DISCOVERY_URI=http://${NS_PREFIX}${TRINO_COORDINATOR_1:-trino-coordinator-1}:8080
+      - TRINO_CONFIG_HTTP__SERVER_HTTP_PORT=8080
+      - TRINO_CONFIG_NODE__SCHEDULER_INCLUDE__COORDINATOR=true
+      - TRINO_CONFIG_COORDINATOR=false
     ports:
       - "8091:8080"
     volumes:
       - ./conf/trino/catalog/:/etc/trino/catalog/
-      - ./conf/trino/coordinator/config.properties:/etc/trino/config.properties
+      # mounting files isnt supported by kthcloud cli
+      #- ./conf/trino/coordinator/config.properties:/etc/trino/config.properties
     links:
       - hivemetastore
 
@@ -27,13 +31,16 @@ services:
     environment:
       - TRINO_CATALOG_HIVE_HIVE_METASTORE_URI=thrift://${NS_PREFIX}${HIVEMETASTORE:-hivemetastore}:9083
       - TRINO_CONFIG_DISCOVERY_URI=http://${NS_PREFIX}${TRINO_COORDINATOR_1:-trino-coordinator-1}:8080
+      - TRINO_CONFIG_HTTP__SERVER_HTTP_PORT=8080
+      - TRINO_CONFIG_COORDINATOR=false
     ports:
       - "8092:8080"
     depends_on:
       - trino-coordinator-1
     volumes:
       - ./conf/trino/catalog/:/etc/trino/catalog/
-      - ./conf/trino/worker/config.properties:/etc/trino/config.properties
+      # mounting files isnt supported by kthcloud cli
+      #- ./conf/trino/worker/config.properties:/etc/trino/config.properties
     links:
       - hivemetastore
       - hiveserver
