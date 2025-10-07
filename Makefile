@@ -1,4 +1,6 @@
 compose_file ?= local.compose.yaml
+JAVA_EXAMPLES_JAR = java-examples/target/java-examples-1.0-SNAPSHOT.jar
+JAVA_SRC = $(shell find java-examples/src -name "*.java")
 
 DC_ARGS ?=
 
@@ -10,23 +12,23 @@ help: ## Show this help
 	@echo "  To get started run: make clean up logs"
 	@echo ""
 	@echo "Targets:"
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| sort \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_/-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| sort -f \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
 
 .DEFAULT_GOAL := help
 
 .PHONY: logs
-logs: ## Check logs
+logs: ## Check logs from the datalake
 	@docker compose -f $(compose_file) logs -f $(DC_ARGS)
 
 .PHONY: up
-up: ## Spin up a docker compose
+up: ## Spin up the docker compose for the datalake
 	@docker compose -f $(compose_file) up -d $(DC_ARGS)
 	@echo "[TIP] You can run make logs to see logs"
 
 .PHONY: down
-down: ## Stop running instances of the compose
+down: ## Stop running instances of the compose for the datalake
 	@docker compose -f $(compose_file) down $(DC_ARGS)
 
 .PHONY: clean
@@ -34,10 +36,31 @@ clean: ## Wipe all persisted data
 	@docker compose -f $(compose_file) down -v --remove-orphans $(DC_ARGS)
 
 .PHONY: java
-java:
-	@cd java-examples && mvn clean install
+java/%: $(JAVA_EXAMPLES_JAR)
+	@spark-submit \
+		--class com.github.cm2027.lab3datalake.$* \
+		--master "local[0]" \
+		--conf "spark.jars.packages"="org.apache.hudi:hudi-spark3.5-bundle_2.12:1.0.2" \
+		$(JAVA_EXAMPLES_JAR)
 
-# .PHONY: java/create
-# java/create: java ## Create
-# 	@cd java-examples && java -cp ./target/java-examples-1.0-SNAPSHOT.jar CreateJSON
-# # mvn compile exec:java -Dexec.mainClass="com.github.cm2027.lab3datalake.App"
+$(JAVA_EXAMPLES_JAR): $(JAVA_SRC)
+	@echo "Building Java shaded JAR..."
+	@mvn -f java-examples/pom.xml package -DskipTests
+
+.PHONY: python
+python/%:
+	@./python-examples/$*
+
+.PHONY: java/create java/read python/create python/read
+
+java/create: java/CreateJSON ## Run the java example to upload the patients in the ./data dir to the datalake
+	@true
+
+java/read: java/Read ## Run the java example to read the uploaded patients from the data lake
+	@true
+
+python/create: python/create_json.py ## Run the python example to upload the patients in the ./data dir to the datalake
+	@true
+
+python/read: python/read.py ## Run the python example to read the uploaded patients from the data lake
+	@true
