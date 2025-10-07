@@ -5,35 +5,72 @@ set -e
 PROGRAM="kthcloud"
 NS_FILE=".kthcloud-ns"
 
+[[ -z "${__logging__dot__sh:-}" ]] && {
+    RED="\e[31m";
+    YELLOW="\e[33m";
+    GREEN="\e[32m";
+    BLUE="\e[34m";
+    GRAY="\e[90m";
+    RESET="\e[0m";
+    ERROR_LOG="${RED}[ERROR]${RESET}";
+    WARN_LOG="${YELLOW}[WARN]${RESET}";
+    INFO_LOG="${GREEN}[INFO]${RESET}";
+    PRINT_INDENT_LOG="${GRAY}||===>${RESET}";
+    log_err() { echo -e "$ERROR_LOG $1" >&2; }
+    log_warn() { echo -e "$WARN_LOG $1" >&2; }
+    log_info() { echo -e "$INFO_LOG $1" >&2; }
+    log_print() { echo -e "$PRINT_INDENT_LOG $1" >&2; }
+    readonly __logging__dot__sh=1;
+}
+
+check_dependencies() {
+  missing_deps=()
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      missing_deps+=("$cmd")
+    fi
+  done
+
+  if [ ${#missing_deps[@]} -ne 0 ]; then
+    echo -e "$ERROR_LOG Missing dependencies: ${missing_deps[*]}" >&2
+    exit 1
+  fi
+}
+
 if ! command -v "$PROGRAM" >/dev/null 2>&1; then
-    echo "[WARN] '$PROGRAM' not found." >&2
+    log_warn "'$PROGRAM' not found."
     read -rp "Do you want to download it? (y/N): " yn
     case "$yn" in
         [Yy]*)
-            echo "[INFO] Downloading $PROGRAM..." >&2
-            # Example download logic — customize for your binary
+            check_dependencies "curl" || { log_err "The installation requires curl, please install curl"; exit 1; }
+
+            log_info "Downloading $PROGRAM..."
             curl -fsSL https://raw.githubusercontent.com/Phillezi/kthcloud-cli/main/scripts/install.sh | bash
-            source ~/.bashrc
-            echo "[INFO] Installed $PROGRAM successfully." >&2
+            source ~/.bashrc || { log_err "Failed to source ~/.bashrc"; exit 1;}
+            log_info "Installed $PROGRAM successfully."
             ;;
         *)
-            echo "[ERROR] $PROGRAM is required. Aborting." >&2
+            log_err "$PROGRAM is required. Aborting."
             exit 1
             ;;
     esac
 fi
 
+if ! command -v "$PROGRAM" >/dev/null 2>&1; then
+  log_err "Could not use $PROGRAM on your system, are you using a different shell than bash? Plz source your rc file or add $HOME/.local/kthcloud/bin to your path to resolve this"
+  exit 1
+fi
 
 if [[ ! -f "$NS_FILE" ]]; then
-    echo "[INFO] Creating namespace file: $NS_FILE" >&2
+    log_info "Creating namespace file: $NS_FILE"
 
     email=$(kthcloud whoami | awk -F': *' '/^Email/ {print $2}' | xargs)
     ns="${email%@*}-"
 
     echo "export NS_PREFIX=\"$ns\"" > "$NS_FILE"
-    echo "[INFO] Saved namespace as '$ns'." >&2
+    log_info "Saved namespace as '$ns'."
 else
-    echo "[INFO] Namespace file already exists. Skipping setup." >&2
+    log_info "Namespace file already exists. Skipping setup." >&2
 fi
 
 
