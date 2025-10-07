@@ -64,3 +64,7 @@ python/create: python/create_json.py ## Run the python example to upload the pat
 
 python/read: python/read.py ## Run the python example to read the uploaded patients from the data lake
 	@true
+
+trino: ## Use trino to query for patients
+	@cd trino-client && \
+		go run main.go

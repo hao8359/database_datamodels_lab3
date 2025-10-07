@@ -41,7 +41,6 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	// === 0. Show tables in the schema ===
 	fmt.Printf("=== Tables in %s.%s ===\n", catalog, schema)
 	tables, err := getTables(ctx, db)
 	if err != nil {
@@ -64,14 +63,12 @@ func main() {
 		return
 	}
 
-	// === 1. Select interesting fields ===
 	fmt.Println("\n=== FHIR Patient Preview ===")
 	query := fmt.Sprintf("SELECT %s FROM %s LIMIT 20", joinColumns(interestingFields), table)
 	if err := runQuery(ctx, db, query); err != nil {
 		log.Fatal(err)
 	}
 
-	// === 2. Filtered query ===
 	fmt.Println("\n=== IDs of Patients born on 1971-09-30 ===")
 	filterQuery := fmt.Sprintf(`SELECT "id" FROM %s WHERE "birthdate" = '1971-09-30'`, table)
 	if err := runQuery(ctx, db, filterQuery); err != nil {
