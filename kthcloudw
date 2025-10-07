@@ -64,8 +64,17 @@ fi
 if [[ ! -f "$NS_FILE" ]]; then
     log_info "Creating namespace file: $NS_FILE"
 
+    check_dependencies "awk" "xargs" || { log_err "The wrapper script needs this to extract your username from your email address"; exit 1; }
+
     email=$(kthcloud whoami | awk -F': *' '/^Email/ {print $2}' | xargs)
     ns="${email%@*}-"
+
+    if [[ -z "$ns" || "$ns" == "-" ]]; then
+      log_info "Could not determine namespace. Are you logged in? (run 'kthcloud login')"
+      kthcloud login || { log_err "Could not login"; exit 1; }
+      email=$(kthcloud whoami | awk -F': *' '/^Email/ {print $2}' | xargs)
+      ns="${email%@*}-"
+    fi
 
     echo "export NS_PREFIX=\"$ns\"" > "$NS_FILE"
     log_info "Saved namespace as '$ns'."
