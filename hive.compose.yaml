@@ -1,15 +1,15 @@
 x-hive-names:
-  hive-metastore-postgresql: &hive-metastore-postgresql "${NS_PREFIX}${HIVE_METASTORE_POSTGRESQL:-hive-metastore-postgresql}"
+  hive-metastore-db: &hive-metastore-db "${NS_PREFIX}${HIVE_METASTORE_POSTGRESQL:-hive-metastore-db}"
   hivemetastore: &hivemetastore "${NS_PREFIX}${HIVEMETASTORE:-hivemetastore}"
   hiveserver: &hiveserver "${NS_PREFIX}${HIVESERVER:-hiveserver}"
 
 services:
 
-  hive-metastore-postgresql:
-    image: bde2020/hive-metastore-postgresql:2.3.0
-    container_name: *hive-metastore-postgresql
+  hive-metastore-db:
+    image: bde2020/hive-metastore-db:2.3.0
+    container_name: *hive-metastore-db
     volumes:
-      - hive-metastore-postgresql:/var/lib/postgresql
+      - hive-metastore-db:/var/lib/postgresql
     labels:
       - "traefik.enable=false"
 
@@ -21,9 +21,9 @@ services:
       - ./hadoop.env
     command: /opt/hive/bin/hive --service metastore
     environment:
-      SERVICE_PRECONDITION: "${NS_PREFIX}${NAMENODE:-namenode}:50070 ${NS_PREFIX}${HIVE_METASTORE_POSTGRESQL:-hive-metastore-postgresql}:5432"
+      SERVICE_PRECONDITION: "${NS_PREFIX}${NAMENODE:-namenode}:50070 ${NS_PREFIX}${HIVE_METASTORE_POSTGRESQL:-hive-metastore-db}:5432"
     depends_on:
-      - hive-metastore-postgresql
+      - hive-metastore-db
       - namenode
     ports:
       - 9083:9083
@@ -48,4 +48,4 @@ services:
       - "traefik.http.services.${NS_PREFIX}${HIVESERVER:-hiveserver}.loadbalancer.server.port=10000"
 
 volumes:
-  hive-metastore-postgresql:
+  hive-metastore-db:
