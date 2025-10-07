@@ -1,6 +1,7 @@
 services:
   trino-coordinator-1:
-    build: ./images/trino/.
+    image: ghcr.io/cm2027/lab3-datalake/trino-hudi:main
+    #build: ./images/trino/.
     container_name: trino-coordinator-1
     hostname: trino-coordinator-1
     ports:
@@ -13,7 +14,8 @@ services:
       - hivemetastore
 
   trino-worker-1:
-    build: ./images/trino/.
+    image: ghcr.io/cm2027/lab3-datalake/trino-hudi:main
+    #build: ./images/trino/.
     container_name: trino-worker-1
     hostname: trino-worker-1
     ports:
