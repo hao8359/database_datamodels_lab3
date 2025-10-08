@@ -57,7 +57,7 @@ if ! command -v "$PROGRAM" >/dev/null 2>&1; then
 fi
 
 if ! command -v "$PROGRAM" >/dev/null 2>&1; then
-  log_err "Could not use $PROGRAM on your system, are you using a different shell than bash? Plz source your rc file or add $HOME/.local/kthcloud/bin to your path to resolve this"
+  log_err "Could not use $PROGRAM on your system. Plz source your ~/.bashrc file or add $HOME/.local/kthcloud/bin to your path to resolve this, then re-run this script.\nTLDR;\n\tsource ~/.bashrc; !!"
   exit 1
 fi
 

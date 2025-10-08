@@ -4,3 +4,4 @@ python-examples/*.py
 !python-examples/session.py
 scripts/*.sh
 kthcloudw
+.devcontainer/scripts/*.sh
