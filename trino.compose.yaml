@@ -13,7 +13,7 @@ services:
       - TRINO_CONFIG_DISCOVERY_URI=http://${NS_PREFIX}${TRINO_COORDINATOR_1:-trino-coordinator-1}:8080
       - TRINO_CONFIG_HTTP__SERVER_HTTP_PORT=8080
       - TRINO_CONFIG_NODE__SCHEDULER_INCLUDE__COORDINATOR=true
-      - TRINO_CONFIG_COORDINATOR=false
+      - TRINO_CONFIG_COORDINATOR=true
     ports:
       - "8091:8080"
     volumes:
