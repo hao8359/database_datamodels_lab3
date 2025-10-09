@@ -135,14 +135,13 @@ jobs:
           echo "Creating multi-arch manifest: $FINAL_TAG"
           docker buildx imagetools create \
             --tag $TAG \
-            "${{ env.IMAGE_NAME }}:${{ github.ref_name }}-amd64" \
-            "${{ env.IMAGE_NAME }}:${{ github.ref_name }}-arm64"
+            "${{ env.IMAGE_NAME }}:devcontainer-${{ github.ref_name }}-amd64" \
+            "${{ env.IMAGE_NAME }}:devcontainer-${{ github.ref_name }}-arm64"
 
       - name: Push multi-arch manifest
         run: |
           TAG="ghcr.io/${{ github.repository }}/devcontainer:${{ github.ref_name }}"
-          docker buildx imagetools inspect $TAG  # Verify manifest
-          docker buildx imagetools push $TAG     # Push to GHCR
+          docker buildx push $TAG     # Push to GHCR
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -151,5 +150,5 @@ jobs:
 
       - name: Sign multi-arch manifest
         run: |
-          TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+          TAG="ghcr.io/${{ github.repository }}/devcontainer:${{ github.ref_name }}"
           cosign sign --yes $TAG
