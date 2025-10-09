@@ -1,0 +1,82 @@
+name: Devcontainer
+
+on:
+  push:
+    branches: ["main", "devcontainer-image"]
+    tags: ["v*.*.*"]
+    paths:
+      - "images/devcontainer/**"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "images/devcontainer/**"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/devcontainer
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: "v2.2.4"
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+
+      - name: Install Dev Container CLI
+        run: npm install -g @devcontainers/cli
+
+      - name: Build and push Dev Container image
+        id: build-and-push
+        run: |
+          cd images/devcontainer
+
+          TAGS="${{ steps.meta.outputs.tags }}"
+          for TAG in $TAGS; do
+            echo "Building and pushing tag: $TAG"
+            devcontainer build \
+              --workspace-folder . \
+              --platform=linux/amd64,linux/arm64 \
+              --image-name $TAG \
+              --push \
+              --cache-from=type=gha \
+              --cache-to=type=gha,mode=max
+          done
+
+          # Capture image digest for signing
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $(echo $TAGS | head -n 1) | cut -d'@' -f2)
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign the published Dev Container image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
