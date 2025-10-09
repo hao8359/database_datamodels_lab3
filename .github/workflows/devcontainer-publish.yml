@@ -4,9 +4,8 @@ on:
   push:
     branches: ["main", "devcontainer-image"]
     tags: ["v*.*.*"]
-    # TODO: Uncomment when stable
-    # paths:
-    #   - "images/devcontainer/**"
+    paths:
+      - "images/devcontainer/**"
   pull_request:
     branches: ["main"]
     paths:
