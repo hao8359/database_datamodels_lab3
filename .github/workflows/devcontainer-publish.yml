@@ -4,9 +4,9 @@ on:
   push:
     branches: ["main", "devcontainer-image"]
     tags: ["v*.*.*"]
-    # TODO: uncomment this when done with trial-and-error
-    #paths:
-    #  - "images/devcontainer/**"
+    # TODO: Uncomment when stable
+    # paths:
+    #   - "images/devcontainer/**"
   pull_request:
     branches: ["main"]
     paths:
@@ -17,42 +17,25 @@ env:
   IMAGE_NAME: ${{ github.repository }}/devcontainer
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # docker moby feature doesnt work when cross compiling... 
+        # https://github.com/devcontainers/features/issues/219
+        arch: [amd64, arm64]
     permissions:
       contents: read
       packages: write
       id-token: write
 
+    outputs:
+      image-tar-${{ matrix.arch }}: ${{ steps.build.outputs.image_tar }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v3.5.0
-        with:
-          cosign-release: "v2.2.4"
-
-      # Set up BuildKit Docker container builder to be able to build
-      # multi-platform images and export cache
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
-
-      - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -60,30 +43,97 @@ jobs:
       - name: Install Dev Container CLI
         run: npm install -g @devcontainers/cli
 
-      - name: Build and push Dev Container image
-        id: build-and-push
+      - name: Build Dev Container image
+        id: build
         run: |
           cd images/devcontainer
+          IMAGE_TAG="${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.arch }}"
+          TAR_FILE="${{ runner.temp }}/devcontainer-${{ matrix.arch }}.tar"
 
-          TAGS="${{ steps.meta.outputs.tags }}"
-          for TAG in $TAGS; do
-            echo "Building and pushing tag: $TAG"
-            devcontainer build \
-              --workspace-folder . \
-              --platform=linux/amd64,linux/arm64 \
-              --image-name $TAG \
-              --push \
-              --cache-from=type=gha \
-              --cache-to=type=gha,mode=max
+          echo "Building architecture ${{ matrix.arch }} -> $IMAGE_TAG"
+          devcontainer build \
+            --workspace-folder . \
+            --platform=linux/${{ matrix.arch }} \
+            --image-name $IMAGE_TAG \
+            --output type=tar,dest=$TAR_FILE \
+            --cache-from=type=gha \
+            --cache-to=type=gha,mode=max
+
+          echo "image_tar=$TAR_FILE" >> $GITHUB_OUTPUT
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: devcontainer-${{ matrix.arch }}
+          path: ${{ steps.build.outputs.image_tar }}
+
+  # -----------------------
+  # Combine into multi-arch manifest
+  # -----------------------
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: mkdir for tars
+        run: |
+          mkdir -p ./images-tar/
+
+      - name: Download amd64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: devcontainer-amd64
+          path: ./images-tar/
+
+      - name: Download arm64 tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: devcontainer-arm64
+          path: ./images-tar/
+      
+      # Set up BuildKit Docker container builder to be able to build
+      # multi-platform images and export cache
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      - name: Load images into Docker
+        run: |
+          for TAR in ./images-tar/*.tar; do
+            echo "Loading $TAR"
+            docker load -i $TAR
           done
 
-          # Capture image digest for signing
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $(echo $TAGS | head -n 1) | cut -d'@' -f2)
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+      - name: Log into registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sign the published Dev Container image
-        if: ${{ github.event_name != 'pull_request' }}
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+      - name: Create and push multi-arch manifest
+        run: |
+          TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+          AMD64_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-amd64"
+          ARM64_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-arm64"
+
+          echo "Creating multi-arch manifest: $TAG"
+          docker manifest create $TAG $AMD64_IMAGE $ARM64_IMAGE
+          docker manifest annotate $TAG $AMD64_IMAGE --arch amd64
+          docker manifest annotate $TAG $ARM64_IMAGE --arch arm64
+          docker manifest push $TAG
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: "v2.2.4"
+
+      - name: Sign multi-arch manifest
+        run: |
+          TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+          cosign sign --yes $TAG
