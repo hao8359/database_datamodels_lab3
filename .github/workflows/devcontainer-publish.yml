@@ -62,7 +62,7 @@ jobs:
             --workspace-folder . \
             --platform=linux/${{ matrix.arch }} \
             --image-name $IMAGE_TAG \
-            --output type=oci,dest=$TAR_FILE \
+            --output type=docker,dest=$TAR_FILE \
             --cache-from=type=gha \
             --cache-to=type=gha,mode=max
 
@@ -109,19 +109,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
-      - name: Create multi-arch manifest
+      - name: Import images and create multi-arch manifest
         run: |
-          # Tag for GHCR
           TAG="ghcr.io/${{ github.repository }}/devcontainer:${{ github.ref_name }}"
 
-          # Convert OCI tarballs to image references
+          # Paths to your OCI tarballs
           AMD64_TAR="./images-tar/devcontainer-${{ github.ref_name }}-amd64.tar"
           ARM64_TAR="./images-tar/devcontainer-${{ github.ref_name }}-arm64.tar"
 
-          # Use buildx imagetools to create multi-arch manifest
+          # Import each architecture tarball into GHCR under temporary tags
+          docker load -i "$AMD64_TAR" --platform=linux/amd64
+          docker load -i "$ARM64_TAR" --platform=linux/arm64
+
+          echo "Creating multi-arch manifest: $FINAL_TAG"
           docker buildx imagetools create \
             --tag $TAG \
-            oci:$AMD64_TAR oci:$ARM64_TAR
+            "${{ env.IMAGE_NAME }}:${{ github.ref_name }}-amd64" \
+            "${{ env.IMAGE_NAME }}:${{ github.ref_name }}-arm64"
 
       - name: Log into registry
         uses: docker/login-action@v3
