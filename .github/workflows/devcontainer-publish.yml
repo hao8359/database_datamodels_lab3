@@ -114,8 +114,8 @@ jobs:
           TAG="ghcr.io/${{ github.repository }}/devcontainer:${{ github.ref_name }}"
 
           # Paths to your OCI tarballs
-          AMD64_TAR="./images-tar/devcontainer-${{ github.ref_name }}-amd64.tar"
-          ARM64_TAR="./images-tar/devcontainer-${{ github.ref_name }}-arm64.tar"
+          AMD64_TAR="./images-tar/devcontainer-amd64.tar"
+          ARM64_TAR="./images-tar/devcontainer-arm64.tar"
 
           # Import each architecture tarball into GHCR under temporary tags
           docker load -i "$AMD64_TAR" --platform=linux/amd64
