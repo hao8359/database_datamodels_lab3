@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        os: [linux]
         # docker moby feature doesnt work when cross compiling... 
         # https://github.com/devcontainers/features/issues/219
         arch: [amd64, arm64]
