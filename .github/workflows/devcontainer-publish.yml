@@ -56,7 +56,7 @@ jobs:
             --workspace-folder . \
             --platform=linux/${{ matrix.arch }} \
             --image-name $IMAGE_TAG \
-            --output type=tar,dest=$TAR_FILE \
+            --output type=oci,dest=$TAR_FILE \
             --cache-from=type=gha \
             --cache-to=type=gha,mode=max
 
