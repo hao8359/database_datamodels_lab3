@@ -116,11 +116,6 @@ jobs:
             "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-amd64" \
             "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-arm64"
 
-      - name: Push multi-arch manifest
-        run: |
-          TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
-          docker buildx push $TAG     # Push to GHCR
-
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
         with:
