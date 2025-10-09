@@ -87,6 +87,17 @@ jobs:
       id-token: write
 
     steps:
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: mkdir for tars
         run: |
           mkdir -p ./images-tar/
@@ -126,13 +137,6 @@ jobs:
             --tag $TAG \
             "${{ env.IMAGE_NAME }}:${{ github.ref_name }}-amd64" \
             "${{ env.IMAGE_NAME }}:${{ github.ref_name }}-arm64"
-
-      - name: Log into registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push multi-arch manifest
         run: |
