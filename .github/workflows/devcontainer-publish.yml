@@ -18,21 +18,18 @@ env:
 
 jobs:
 
+  # docker moby feature doesnt work when cross compiling... 
+  # https://github.com/devcontainers/features/issues/219
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         os: [linux]
-        # docker moby feature doesnt work when cross compiling... 
-        # https://github.com/devcontainers/features/issues/219
         arch: [amd64, arm64]
     permissions:
       contents: read
       packages: write
       id-token: write
-
-    outputs:
-      image-tar-${{ matrix.arch }}: ${{ steps.build.outputs.image_tar }}
 
     steps:
       - name: Checkout repository
