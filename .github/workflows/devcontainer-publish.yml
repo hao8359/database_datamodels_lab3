@@ -44,6 +44,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
 
@@ -55,24 +65,16 @@ jobs:
         run: |
           cd images/devcontainer
           IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.arch }}"
-          TAR_FILE="${{ runner.temp }}/devcontainer-${{ matrix.arch }}.tar"
 
           echo "Building architecture ${{ matrix.arch }} -> $IMAGE_TAG"
           devcontainer build \
             --workspace-folder . \
             --platform=linux/${{ matrix.arch }} \
             --image-name $IMAGE_TAG \
-            --output type=docker,dest=$TAR_FILE \
+            --push \
             --cache-from=type=gha \
             --cache-to=type=gha,mode=max
 
-          echo "image_tar=$TAR_FILE" >> $GITHUB_OUTPUT
-
-      - name: Upload tarball artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: devcontainer-${{ matrix.arch }}
-          path: ${{ steps.build.outputs.image_tar }}
 
   # -----------------------
   # Combine into multi-arch manifest
@@ -98,22 +100,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: mkdir for tars
-        run: |
-          mkdir -p ./images-tar/
-
-      - name: Download amd64 tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: devcontainer-amd64
-          path: ./images-tar/
-
-      - name: Download arm64 tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: devcontainer-arm64
-          path: ./images-tar/
-      
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
       # https://github.com/docker/setup-buildx-action
@@ -123,14 +109,6 @@ jobs:
       - name: Import images and create multi-arch manifest
         run: |
           TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
-
-          # Paths to your OCI tarballs
-          AMD64_TAR="./images-tar/devcontainer-amd64.tar"
-          ARM64_TAR="./images-tar/devcontainer-arm64.tar"
-
-          # Import each architecture tarball into GHCR under temporary tags
-          docker load -i "$AMD64_TAR" --platform=linux/amd64
-          docker load -i "$ARM64_TAR" --platform=linux/arm64
 
           echo "Creating multi-arch manifest: $FINAL_TAG"
           docker buildx imagetools create \
