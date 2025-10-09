@@ -21,11 +21,14 @@ jobs:
   # docker moby feature doesnt work when cross compiling... 
   # https://github.com/devcontainers/features/issues/219
   build:
-    runs-on: ubuntu-latest
     strategy:
-      matrix:
-        os: [linux]
-        arch: [amd64, arm64]
+    matrix:
+      include:
+        - arch: amd64
+          runs_on: ubuntu-latest
+        - arch: arm64
+          runs_on: ubuntu-24.04-arm64
+    runs-on: ${{ matrix.runs_on }}
     permissions:
       contents: read
       packages: write
