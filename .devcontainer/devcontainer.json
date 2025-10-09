@@ -3,18 +3,7 @@
 {
 	"name": "HUDI devcontainer",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:1-3.9-bullseye",
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	"features": {
-		// JVM is needed for pyspark
-		"ghcr.io/devcontainers/features/java:1": {
-			"version": "17.0.4.1-tem",
-			"installMaven": "true",
-			"installGradle": "false"
-		},
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
-		"ghcr.io/devcontainers/features/go": {}
-	},
+	"image": "ghcr.io/cm2027/lab3-datalake/devcontainer:devcontainer-image",
 	"containerEnv": {
 		"JAVA_TOOL_OPTIONS": "-XX:+IgnoreUnrecognizedVMOptions -XX:+UseParallelGC -XX:-UseContainerSupport --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
 		"NS_PREFIX": ""
