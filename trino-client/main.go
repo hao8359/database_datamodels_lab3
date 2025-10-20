@@ -16,7 +16,7 @@ import (
 const (
 	catalog = "hive"
 	schema  = "default"
-	table   = "fhir_raw_patient"
+	table   = "fhir_patient"
 )
 
 var interestingFields = []string{

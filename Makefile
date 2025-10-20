@@ -59,11 +59,36 @@ java/create: java/CreateJSON ## Run the java example to upload the patients in t
 java/read: java/Read ## Run the java example to read the uploaded patients from the data lake
 	@true
 
-python/create: python/create_json.py ## Run the python example to upload the patients in the ./data dir to the datalake
-	@true
+#python/create: python/create_json.py ## Run the python example to upload the patients in the ./data dir to the datalake
+#	@true
 
-python/read: python/read.py ## Run the python example to read the uploaded patients from the data lake
-	@true
+#python/read: python/read.py ## Run the python example to read the uploaded patients from the data lake
+#	@true
+python/create:
+	docker compose -f local.compose.yaml run --rm sparkmaster \
+		spark-submit \
+		--master spark://sparkmaster:7077 \
+		--packages org.apache.hudi:hudi-spark3.5-bundle_2.12:1.0.2 \
+		--conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+		--conf spark.sql.extensions=org.apache.spark.sql.hudi.HoodieSparkSessionExtension \
+		--conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.hudi.catalog.HoodieCatalog \
+		--conf spark.sql.hive.convertMetastoreParquet=false \
+		--conf spark.sql.legacy.timeParserPolicy=LEGACY \
+		/opt/spark-apps/create_fhir_hudi_fixed.py
+
+python/read:
+	docker compose -f local.compose.yaml run --rm sparkmaster \
+		spark-submit \
+		--master spark://sparkmaster:7077 \
+		--packages org.apache.hudi:hudi-spark3.5-bundle_2.12:1.0.2 \
+		--conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+		--conf spark.sql.extensions=org.apache.spark.sql.hudi.HoodieSparkSessionExtension \
+		--conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.hudi.catalog.HoodieCatalog \
+		--conf spark.sql.hive.convertMetastoreParquet=false \
+		--conf spark.sql.legacy.timeParserPolicy=LEGACY \
+		/opt/spark-apps/read_fhir_hudi_fixed.py
+
+
 
 trino: ## Use trino to query for patients
 	@cd trino-client && \
